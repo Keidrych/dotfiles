@@ -11,17 +11,15 @@ call plug#begin('~/.config/plugged')
 "= Mandatory
 Plug 'jooize/vim-colemak'
 Plug 'sheerun/vim-polyglot'
-" Plug 'tpope/vim-vinegar' " https://shapeshed.com/vim-netrw/
 Plug 'justinmk/vim-dirvish'
 Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-unimpaired'
 Plug 'itchyny/lightline.vim'
 Plug 'maximbaz/lightline-ale'
-Plug 'taohex/lightline-buffer'
+"Plug 'taohex/lightline-buffer'
 "Plug 'mhinz/vim-startify'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-Plug 'junegunn/fzf.vim'
-Plug 'mileszs/ack.vim'
+Plug 'junegunn/fzf.vim', {'do': 'cargo install ripgrep'}
 Plug 'kassio/neoterm'
 Plug 'w0rp/ale'
 "Plug 'tpope/vim-fugitive'
@@ -49,10 +47,11 @@ Plug 'jeffkreeftmeijer/vim-numbertoggle'
 Plug 'niftylettuce/vim-jinja'
 Plug 'jiangmiao/auto-pairs'
 Plug '907th/vim-auto-save'
-"Plug 'gcmt/taboo.vim'
-"Plug 'airblade/vim-rooter'
-"TODO enable vim-drawer
-"Plug 'samuelsimoes/vim-drawer'
+Plug 'c9s/vikube.vim'
+Plug 'justinmk/vim-sneak'
+Plug 'gcmt/taboo.vim'
+Plug 'airblade/vim-rooter'
+Plug 'samuelsimoes/vim-drawer'
 
 " On-Demand ~ FileTypes
 
@@ -63,8 +62,12 @@ Plug 'NLKNguyen/papercolor-theme'
 "Plug 'morhetz/gruvbox'
 call plug#end()
 
+" For any plugins that use this, make their keymappings use comma
+let mapleader = " "
+let g:mapleader = " "
+let maplocalleader = ","
+
 " Window Settings
-nmap ` <Plug>(choosewin)
 let g:choosewin_overlay_enable = 1
 let g:goldenview__enable_at_startup = 1
 set splitbelow
@@ -107,91 +110,50 @@ set showtabline=2  " always show tabline
 set sessionoptions+=tabpages,globals
 " use lightline-buffer in lightline
 let g:lightline = {
-  \ 'tabline': {
-  \   'left': [ [ 'taboo' ] ],
-  \   'right': [[ 'close']]
-  \ },
   \ 'active': {
   \   'left': [ [ 'mode', 'paste'],
   \             [ 'readonly', 'filename', 'modified'],
-  \             [ 'separator'  ],
-  \             [ 'bufferbefore', 'buffercurrent', 'bufferafter'  ] ],
+  \             [ 'separator'  ]],
   \   'right': [[ 'linter_errors', 'linter_warnings', 'linter_ok' ]]
   \ },
   \ 'component_expand': {
-  \   'buffercurrent': 'lightline#buffer#buffercurrent',
-  \   'bufferbefore': 'lightline#buffer#bufferbefore',
-  \   'bufferafter': 'lightline#buffer#bufferafter',
   \   'linter_warnings': 'lightline#ale#warnings',
   \   'linter_errors': 'lightline#ale#errors',
   \   'linter_ok': 'lightline#ale#ok',
   \ },
   \ 'component_type': {
-  \   'buffercurrent': 'tabsel',
-  \   'bufferbefore': 'raw',
-  \   'bufferafter': 'raw',
   \   'linter_warnings': 'warning',
   \   'linter_errors': 'error',
   \   'linter_ok': 'left',
   \ },
   \ 'component_function': {
-  \   'bufferinfo': 'lightline#buffer#bufferinfo',
-  \   'taboo': 'TabooTabName(tabpagenr())'
   \ }
   \}
-nnoremap <Left> :bprev<CR>
-nnoremap <Right> :bnext<CR>
-" TODO use lightline's tabline instead of taboo's
-let g:taboo_tabline = 1
-let g:lightline_buffer_logo = ''
-let g:lightline_buffer_readonly_icon = ''
-let g:lightline_buffer_modified_icon = '✭'
-let g:lightline_buffer_git_icon = ' '
-let g:lightline_buffer_ellipsis_icon = '…'
-let g:lightline_buffer_expand_left_icon = '◀ '
-let g:lightline_buffer_expand_right_icon = ' ▶'
-let g:lightline_buffer_active_buffer_left_icon = ''
-let g:lightline_buffer_active_buffer_right_icon = ''
-let g:lightline_buffer_separator_icon = '  '
 
-" lightline-buffer function settings
-let g:lightline_buffer_show_bufnr = 1
-let g:lightline_buffer_rotate = 0
-let g:lightline_buffer_fname_mod = ':t'
-let g:lightline_buffer_excludes = ['vimfiler']
-
-let g:lightline_buffer_maxflen = 30
-let g:lightline_buffer_maxfextlen = 3
-let g:lightline_buffer_minflen = 16
-let g:lightline_buffer_minfextlen = 3
-let g:lightline_buffer_reservelen = 20
-
-" Ale fixers
+" Ale Info
 let g:ale_fixers = {
   \ 'javascript': [ 'prettier' ],
   \ 'json': [ 'prettier' ]
   \}
-
-" Ack / Searching
-if executable('ag')
-  let g:ackprg = 'ag --vimgrep'
-endif
-
-" For any plugins that use this, make their keymappings use comma
-let mapleader = " "
-let g:mapleader = " "
-let maplocalleader = ","
-
-" Terminal
-tnoremap <Esc> <C-\><C-n>
+let g:ale_linters = {
+  \ 'javascript': [ 'xo' ]
+\}
+let g:ale_linters_explicit = 1
 
 " FZF (replaces Ctrl-P, FuzzyFinder and Command-T)
+let $FZF_DEFAULT_COMMAND='rg --files --no-ignore-vcs --hidden --follow'
+command! -bang -nargs=* Rg
+\ call fzf#vim#grep(
+\   'rg --vimgrep --column --line-number --no-heading --fixed-strings --ignore-case --no-ignore-vcs --hidden --follow --color=always '.shellescape(<q-args>), 1,
+\   <bang>0 ? fzf#vim#with_preview('up:60%')
+\           : fzf#vim#with_preview('right:50%:hidden', '?'),
+\   <bang>0)
 set rtp+=/usr/local/opt/fzf
 set rtp+=~/.fzf
-nmap ; :Buffers<CR>
-nmap <Leader>r :Tags<CR>
-nmap <Leader>t :Files<CR>
-nmap <Leader>a :Ag<CR>
+"nmap ; :Buffers<CR>
+"nmap <Leader>r :Tags<CR>
+"nmap <Leader>t :Files<CR>
+"nmap <Leader>a :Ag<CR>
 
 " GitGutter styling to use · instead of +/-
 let g:gitgutter_sign_added = '∙'
@@ -225,7 +187,37 @@ let g:ale_lint_on_filetype_changed = 0
 let g:ale_lint_on_text_changed = 'never'
 let g:ale_lint_on_insert_leave = 0
 
+" Sneak settings
+let g:sneak#label = 1
+let g:sneak#s_next = 1
 
+" Force Colemak KeyBindings
+silent! source "$HOME/.vim/bundle/vim-colemak/plugin/colemak.vim"
+
+" KeyBindings
+nmap ` <Plug>(choosewin)
+
+" 2-character Sneak (default)
+noremap o <Nop>
+noremap O <Nop>
+map o <Plug>Sneak_s
+map O <Plug>Sneak_S
+
+" repeat motion
+noremap ; <Nop>
+noremap y <Nop>
+map y <Plug>Sneak_;
+map ; <Plug>Sneak_,
+
+" Terminal
+tnoremap <Esc> <C-\><C-n>
+
+" Quit
+nmap q :q<cr>
+nmap Q :qa<cr>
+
+" Vim-Drawer
+nnoremap <space>d :VimDrawer<CR>
 
 " AutoCommands
 augroup test
@@ -241,5 +233,3 @@ augroup VCenterCursor
     \ let &scrolloff=winheight(win_getid())/2
 augroup END
 
-" Force Colemak KeyBindings
-silent! source "$HOME/.vim/bundle/vim-colemak/plugin/colemak.vim"
